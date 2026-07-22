@@ -8,6 +8,7 @@ import { shouldCompactRecordTableFirstColumnComponentState } from '@/object-reco
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
 import { useIcons } from 'twenty-ui/icon';
+import { OverflowingTextWithTooltip } from 'twenty-ui/surfaces';
 import {
   MOBILE_VIEWPORT,
   ThemeContext,
@@ -39,10 +40,9 @@ const StyledIcon = styled.div`
   }
 `;
 
-const StyledText = styled.span`
+const StyledTextContainer = styled.div`
+  min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 `;
 
 type RecordTableColumnHeadProps = {
@@ -81,9 +81,11 @@ export const RecordTableColumnHead = ({
       <StyledIcon>
         <Icon size={theme.icon.size.md} />
       </StyledIcon>
-      <StyledText>
-        {correspondingFieldMetadataItem.foundFieldMetadataItem?.label}
-      </StyledText>
+      <StyledTextContainer>
+        <OverflowingTextWithTooltip
+          text={correspondingFieldMetadataItem.foundFieldMetadataItem?.label}
+        />
+      </StyledTextContainer>
     </StyledTitle>
   );
 };

@@ -108,6 +108,7 @@ export const RecordTableCellFieldContextGeneric = ({
           objectMetadataItem,
         }),
         displayedMaxRows: 1,
+        isDisplayInRecordTable: true,
         isRecordFieldReadOnly:
           isRecordTableCellsNonEditable ||
           isRecordFieldReadOnly({
