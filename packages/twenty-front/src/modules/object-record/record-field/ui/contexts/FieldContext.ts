@@ -43,6 +43,7 @@ export type GenericFieldContextType = {
   triggerEvent?: TriggerEventType;
   isForbidden?: boolean;
   anchorId?: string;
+  isDisplayInRecordTable?: boolean;
 };
 
 export const FieldContext = createContext<GenericFieldContextType>(
