@@ -1,6 +1,7 @@
 import { isNotEmptyObject, type ValidationError } from 'class-validator';
 
 import { AggregateChartConfigurationDTO } from 'src/engine/metadata-modules/page-layout-widget/dtos/aggregate-chart-configuration.dto';
+import { CashFlowConfigurationDTO } from 'src/engine/metadata-modules/page-layout-widget/dtos/cash-flow-configuration.dto';
 import { BarChartConfigurationDTO } from 'src/engine/metadata-modules/page-layout-widget/dtos/bar-chart-configuration.dto';
 import { FieldConfigurationDTO } from 'src/engine/metadata-modules/page-layout-widget/dtos/field-configuration.dto';
 import { FrontComponentConfigurationDTO } from 'src/engine/metadata-modules/page-layout-widget/dtos/front-component-configuration.dto';
@@ -118,6 +119,12 @@ export const validateWidgetConfigurationInput = ({
     case WidgetConfigurationType.RECORD_TABLE:
       errors = validateWidgetConfigurationByDto(
         RecordTableConfigurationDTO,
+        configuration,
+      );
+      break;
+    case WidgetConfigurationType.CASH_FLOW:
+      errors = validateWidgetConfigurationByDto(
+        CashFlowConfigurationDTO,
         configuration,
       );
       break;

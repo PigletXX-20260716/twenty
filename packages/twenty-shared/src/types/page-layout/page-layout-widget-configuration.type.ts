@@ -153,6 +153,10 @@ export type EmailThreadConfiguration = {
   configurationType: 'EMAIL_THREAD';
 };
 
+export type CashFlowConfiguration = {
+  configurationType: 'CASH_FLOW';
+};
+
 export type CalendarConfiguration = {
   configurationType: 'CALENDAR';
 };
@@ -191,4 +195,5 @@ export type PageLayoutWidgetConfiguration =
   | WorkflowConfiguration
   | WorkflowVersionConfiguration
   | WorkflowRunConfiguration
-  | EmailThreadConfiguration;
+  | EmailThreadConfiguration
+  | CashFlowConfiguration;
