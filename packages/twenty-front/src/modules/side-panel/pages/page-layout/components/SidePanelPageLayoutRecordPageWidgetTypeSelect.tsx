@@ -19,6 +19,7 @@ import { SidePanelList } from '@/side-panel/components/SidePanelList';
 import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
 import { useNavigatePageLayoutSidePanel } from '@/side-panel/pages/page-layout/hooks/useNavigatePageLayoutSidePanel';
 import { usePageLayoutIdFromContextStore } from '@/side-panel/pages/page-layout/hooks/usePageLayoutIdFromContextStore';
+import { CASH_FLOW_REQUIRED_FIELD_NAMES } from '@/page-layout/widgets/cash-flow/constants/CashFlowRequiredFieldNames';
 import { getFrontComponentWidgetTypeSelectItemId } from '@/side-panel/pages/page-layout/utils/getFrontComponentWidgetTypeSelectItemId';
 import { resolveWidgetTypeSelectTargetTabId } from '@/side-panel/pages/page-layout/utils/resolveWidgetTypeSelectTargetTabId';
 import { SelectableListItem } from '@/ui/layout/selectable-list/components/SelectableListItem';
@@ -31,7 +32,7 @@ import { useStore } from 'jotai';
 import { useCallback } from 'react';
 import { SidePanelPages } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { IconApps, IconList } from 'twenty-ui/icon';
+import { IconApps, IconChartLine, IconList } from 'twenty-ui/icon';
 import { v4 as uuidv4 } from 'uuid';
 import {
   type FrontComponent,
@@ -82,6 +83,15 @@ export const SidePanelPageLayoutRecordPageWidgetTypeSelect = () => {
   const { objectMetadataItem } = useObjectMetadataItem({
     objectNameSingular: targetObjectNameSingular,
   });
+
+  // Kept in sync manually with the identical check in CashFlowWidget.tsx
+  // (the widget's own fallback guard) — update both if the eligibility rule
+  // ever changes.
+  const hasCashFlowFields = CASH_FLOW_REQUIRED_FIELD_NAMES.every((fieldName) =>
+    objectMetadataItem.fields.some(
+      (field) => field.name === fieldName && field.isActive,
+    ),
+  );
 
   const allFieldWidgetFields = useFieldWidgetEligibleFields(
     targetObjectNameSingular,
@@ -328,9 +338,71 @@ export const SidePanelPageLayoutRecordPageWidgetTypeSelect = () => {
     ],
   );
 
+  const handleCreateCashFlowWidget = useCallback(() => {
+    const replacePositionIndex = getExistingWidgetPositionIndex();
+    removeExistingWidgetIfReplacing();
+
+    const updatedPageLayout = store.get(pageLayoutDraftState);
+    const activeTab = updatedPageLayout.tabs.find((tab) => tab.id === tabId);
+    const positionIndex =
+      replacePositionIndex ?? activeTab?.widgets.length ?? 0;
+    const widgetId = uuidv4();
+
+    const newWidget: PageLayoutWidget = {
+      __typename: 'PageLayoutWidget',
+      id: widgetId,
+      applicationId: '',
+      isActive: true,
+      pageLayoutTabId: tabId,
+      title: t`Cash Flow`,
+      type: WidgetType.CASH_FLOW,
+      configuration: {
+        __typename: 'CashFlowConfiguration',
+        configurationType: WidgetConfigurationType.CASH_FLOW,
+      },
+      gridPosition: {
+        __typename: 'GridPosition',
+        row: 0,
+        column: 0,
+        rowSpan: 1,
+        columnSpan: 12,
+      },
+      position: {
+        __typename: 'PageLayoutWidgetVerticalListPosition',
+        layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
+        index: positionIndex,
+      },
+      objectMetadataId: objectMetadataItem.id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      deletedAt: null,
+    };
+
+    store.set(pageLayoutDraftState, (prev) => ({
+      ...prev,
+      tabs: addWidgetToTab(prev.tabs, tabId, newWidget),
+    }));
+
+    setPageLayoutEditingWidgetId(widgetId);
+    insertCreatedWidgetAtContext(widgetId);
+
+    closeSidePanelMenu();
+  }, [
+    closeSidePanelMenu,
+    getExistingWidgetPositionIndex,
+    insertCreatedWidgetAtContext,
+    objectMetadataItem.id,
+    pageLayoutDraftState,
+    removeExistingWidgetIfReplacing,
+    setPageLayoutEditingWidgetId,
+    store,
+    tabId,
+  ]);
+
   const selectableItemIds = [
     'fields',
     'field',
+    ...(hasCashFlowFields ? ['cash-flow'] : []),
     ...frontComponentsWithSelectItemId.map(({ selectItemId }) => selectItemId),
   ];
 
@@ -353,6 +425,19 @@ export const SidePanelPageLayoutRecordPageWidgetTypeSelect = () => {
             onClick={handleCreateFieldWidget}
           />
         </SelectableListItem>
+        {hasCashFlowFields && (
+          <SelectableListItem
+            itemId="cash-flow"
+            onEnter={handleCreateCashFlowWidget}
+          >
+            <CommandMenuItem
+              Icon={IconChartLine}
+              label={t`Cash Flow`}
+              id="cash-flow"
+              onClick={handleCreateCashFlowWidget}
+            />
+          </SelectableListItem>
+        )}
       </SidePanelGroup>
 
       {frontComponentsWithSelectItemId.length > 0 && (

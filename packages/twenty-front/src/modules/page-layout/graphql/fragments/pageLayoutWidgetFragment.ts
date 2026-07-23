@@ -153,6 +153,9 @@ export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
       ... on EmailThreadConfiguration {
         configurationType
       }
+      ... on CashFlowConfiguration {
+        configurationType
+      }
       ... on FieldConfiguration {
         configurationType
         fieldDisplayMode
