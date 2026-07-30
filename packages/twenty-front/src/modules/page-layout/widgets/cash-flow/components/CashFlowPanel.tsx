@@ -1,9 +1,12 @@
 import { CashFlowChart } from '@/page-layout/widgets/cash-flow/components/CashFlowChart';
+import { CashFlowEventsSection } from '@/page-layout/widgets/cash-flow/components/CashFlowEventsSection';
 import { CashFlowInsightCallout } from '@/page-layout/widgets/cash-flow/components/CashFlowInsightCallout';
 import { CashFlowSeasonCards } from '@/page-layout/widgets/cash-flow/components/CashFlowSeasonCards';
 import { CashFlowYearEndWarning } from '@/page-layout/widgets/cash-flow/components/CashFlowYearEndWarning';
+import { type CashFlowEventRecord } from '@/page-layout/widgets/cash-flow/hooks/useCashFlowEventsForRecord';
 import { computeCashFlowSeries } from '@/page-layout/widgets/cash-flow/utils/computeCashFlowSeries';
 import { formatSignedShortCurrency } from '@/page-layout/widgets/cash-flow/utils/formatSignedShortCurrency';
+import { type SeasonLabel } from '@/page-layout/widgets/cash-flow/utils/getSeasonForDate';
 import { styled } from '@linaria/react';
 import { t } from '@lingui/core/macro';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
@@ -42,12 +45,20 @@ type CashFlowPanelProps = {
   startingBalance: number;
   seasonNetCashFlows: [number, number, number, number];
   currencyCode: string;
+  opportunityId: string;
+  forecastYear: number | null;
+  events: CashFlowEventRecord[];
+  eventsBySeasonLabel: Record<SeasonLabel, CashFlowEventRecord[]>;
 };
 
 export const CashFlowPanel = ({
   startingBalance,
   seasonNetCashFlows,
   currencyCode,
+  opportunityId,
+  forecastYear,
+  events,
+  eventsBySeasonLabel,
 }: CashFlowPanelProps) => {
   const { points, seasonNets, troughIndex } = computeCashFlowSeries({
     startingBalance,
@@ -86,6 +97,7 @@ export const CashFlowPanel = ({
         seasonNets={seasonNets}
         troughSeasonLabel={troughSeasonLabel}
         currencyCode={currencyCode}
+        eventsBySeasonLabel={eventsBySeasonLabel}
       />
 
       {hasFundingNeed && (
@@ -102,6 +114,14 @@ export const CashFlowPanel = ({
           currencyCode={currencyCode}
         />
       )}
+
+      <StyledSectionLabel>{t`Cashflow Events`}</StyledSectionLabel>
+      <CashFlowEventsSection
+        opportunityId={opportunityId}
+        forecastYear={forecastYear}
+        events={events}
+        currencyCode={currencyCode}
+      />
     </StyledContainer>
   );
 };

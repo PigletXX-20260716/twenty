@@ -5,6 +5,7 @@ import { useContext, useId } from 'react';
 import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
 import { FieldContext } from '@/object-record/record-field/ui/contexts/FieldContext';
 import { useNumberFieldDisplay } from '@/object-record/record-field/ui/meta-types/hooks/useNumberFieldDisplay';
+import { isForecastYearField } from '@/object-record/record-field/ui/types/guards/isForecastYearField';
 import { isLoanToValueRatioField } from '@/object-record/record-field/ui/types/guards/isLoanToValueRatioField';
 import { NumberDisplay } from '@/ui/field/display/components/NumberDisplay';
 import { formatToShortNumber, isDefined } from 'twenty-shared/utils';
@@ -41,6 +42,13 @@ export const getLoanToValueRatioTooltipContent = ({
   return t`Loan-to-Value Ratio = Loan Amount ÷ Farm Property Value. A ratio over 100% means the loan amount exceeds the property’s value, shown in red as a risk flag.`;
 };
 
+const getForecastYearTooltipContent = (
+  isForecastYear: boolean,
+): string | null =>
+  isForecastYear
+    ? t`Defines the 12-month forecast window: March 1 of this year through the last day of February the following year. New Cash Flow Events must fall within this window; changing this value does not check existing events.`
+    : null;
+
 export const NumberFieldDisplay = () => {
   const tooltipAnchorId = `loan-to-value-ratio-tooltip-anchor-${useId()}`;
   const { isDisplayInRecordTable } = useContext(FieldContext);
@@ -76,11 +84,12 @@ export const NumberFieldDisplay = () => {
     />
   );
 
-  const tooltipContent = getLoanToValueRatioTooltipContent({
-    isLoanToValueRatio,
-    isHighLoanToValueRatio,
-    isDisplayInRecordTable,
-  });
+  const tooltipContent =
+    getLoanToValueRatioTooltipContent({
+      isLoanToValueRatio,
+      isHighLoanToValueRatio,
+      isDisplayInRecordTable,
+    }) ?? getForecastYearTooltipContent(isForecastYearField(fieldDefinition));
 
   if (!isDefined(tooltipContent)) {
     return numberDisplay;

@@ -20,6 +20,9 @@ type IsRecordFieldReadOnlyParams = {
   objectPermissions: ObjectPermission;
   fieldDefinition?: FieldDefinition<FieldMetadata>;
   objectPermissionsByObjectMetadataId?: ObjectPermissionsByObjectMetadataId;
+  // Set when a field is locked because it's derived from external data the
+  // user can't edit directly here (e.g. a Cash Flow season field with events).
+  isComputedFromExternalSource?: boolean;
 };
 
 export const isRecordFieldReadOnly = ({
@@ -30,6 +33,7 @@ export const isRecordFieldReadOnly = ({
   fieldMetadataItem,
   fieldDefinition,
   objectPermissionsByObjectMetadataId,
+  isComputedFromExternalSource,
 }: IsRecordFieldReadOnlyParams) => {
   const fieldReadOnlyByPermissions = isFieldMetadataReadOnlyByPermissions({
     objectPermissions,
@@ -54,6 +58,7 @@ export const isRecordFieldReadOnly = ({
     isReadOnlyStandardFieldOnSystemObject ||
     !(fieldMetadataItem.isUIEditable ?? true) ||
     fieldReadOnlyByPermissions ||
-    oneToManyTargetReadOnly
+    oneToManyTargetReadOnly ||
+    isComputedFromExternalSource === true
   );
 };

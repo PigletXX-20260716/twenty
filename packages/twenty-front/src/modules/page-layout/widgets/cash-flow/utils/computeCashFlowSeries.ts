@@ -14,7 +14,7 @@ export type CashFlowSeries = {
   troughIndex: number;
 };
 
-const SEASON_LABELS = ['Spring', 'Summer', 'Fall', 'Winter'] as const;
+export const SEASON_LABELS = ['Spring', 'Summer', 'Fall', 'Winter'] as const;
 
 export const computeCashFlowSeries = ({
   startingBalance,

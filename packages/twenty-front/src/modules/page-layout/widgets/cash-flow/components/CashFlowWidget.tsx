@@ -2,8 +2,10 @@ import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadata
 import { recordStoreFamilySelector } from '@/object-record/record-store/states/selectors/recordStoreFamilySelector';
 import { type FieldCurrencyValue } from '@/object-record/record-field/ui/types/FieldMetadata';
 import { CASH_FLOW_FIELD_NAMES } from '@/page-layout/widgets/cash-flow/constants/CashFlowFieldNames';
+import { FORECAST_YEAR_FIELD_NAME } from '@/page-layout/widgets/cash-flow/constants/ForecastYearFieldName';
 import { CASH_FLOW_REQUIRED_FIELD_NAMES } from '@/page-layout/widgets/cash-flow/constants/CashFlowRequiredFieldNames';
 import { CashFlowPanel } from '@/page-layout/widgets/cash-flow/components/CashFlowPanel';
+import { useCashFlowEventsForRecord } from '@/page-layout/widgets/cash-flow/hooks/useCashFlowEventsForRecord';
 import { type PageLayoutWidget } from '@/page-layout/types/PageLayoutWidget';
 import { useTargetRecord } from '@/ui/layout/contexts/useTargetRecord';
 import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
@@ -87,6 +89,15 @@ export const CashFlowWidget = ({ widget: _widget }: CashFlowWidgetProps) => {
     },
   ) as FieldCurrencyValue | null | undefined;
 
+  const forecastYear = useAtomFamilySelectorValue(recordStoreFamilySelector, {
+    recordId: targetRecord.id,
+    fieldName: FORECAST_YEAR_FIELD_NAME,
+  }) as number | null | undefined;
+
+  const { events, eventsBySeasonLabel } = useCashFlowEventsForRecord(
+    targetRecord.id,
+  );
+
   // All five fields describe the same forecast, so they're expected to share
   // one currency — the starting balance's code is used as the panel's currency.
   const currencyCode = startingCashBalance?.currencyCode ?? 'USD';
@@ -125,6 +136,10 @@ export const CashFlowWidget = ({ widget: _widget }: CashFlowWidgetProps) => {
           toDollars(winterNetCashFlow),
         ]}
         currencyCode={currencyCode}
+        opportunityId={targetRecord.id}
+        forecastYear={forecastYear ?? null}
+        events={events}
+        eventsBySeasonLabel={eventsBySeasonLabel}
       />
     </StyledContainer>
   );
