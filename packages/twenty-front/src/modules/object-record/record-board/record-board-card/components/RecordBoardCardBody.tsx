@@ -16,6 +16,8 @@ import { RecordFieldComponentInstanceContext } from '@/object-record/record-fiel
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { RecordInlineCell } from '@/object-record/record-inline-cell/components/RecordInlineCell';
 import { getRecordFieldInputInstanceId } from '@/object-record/utils/getRecordFieldInputId';
+import { useCashFlowEventsForRecord } from '@/page-layout/widgets/cash-flow/hooks/useCashFlowEventsForRecord';
+import { getIsCashFlowSeasonFieldComputedFromEvents } from '@/page-layout/widgets/cash-flow/utils/getIsCashFlowSeasonFieldComputedFromEvents';
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
 import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
 import { useContext } from 'react';
@@ -25,6 +27,10 @@ export const RecordBoardCardBody = () => {
 
   const { updateOneRecord, objectPermissions, objectMetadataItem } =
     useContext(RecordBoardContext);
+
+  const { eventsBySeasonLabel } = useCashFlowEventsForRecord(recordId, {
+    skip: objectMetadataItem.nameSingular !== 'opportunity',
+  });
 
   const {
     labelIdentifierFieldMetadataItem,
@@ -92,6 +98,11 @@ export const RecordBoardCardBody = () => {
                   },
                   fieldDefinition: correspondingFieldDefinition,
                   objectPermissionsByObjectMetadataId,
+                  isComputedFromExternalSource:
+                    getIsCashFlowSeasonFieldComputedFromEvents({
+                      fieldDefinition: correspondingFieldDefinition,
+                      eventsBySeasonLabel,
+                    }),
                 }),
                 fieldDefinition: correspondingFieldDefinition,
                 useUpdateRecord: useUpdateOneRecordHook,

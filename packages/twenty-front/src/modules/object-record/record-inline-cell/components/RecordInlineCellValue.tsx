@@ -34,7 +34,7 @@ export const RecordInlineCellValue = () => {
     <StyledClickableContainer readonly={readonly} isCentered={isCentered}>
       <RecordInlineCellDisplayMode
         isHovered={isFocused}
-        onClick={onOpenEditMode}
+        onClick={readonly === true ? undefined : onOpenEditMode}
       >
         <FieldDisplay />
       </RecordInlineCellDisplayMode>

@@ -19,10 +19,14 @@ export type CashFlowEventRecord = {
   } | null;
 };
 
-export const useCashFlowEventsForRecord = (opportunityId: string) => {
+export const useCashFlowEventsForRecord = (
+  opportunityId: string,
+  options?: { skip?: boolean },
+) => {
   const { records, loading } = useFindManyRecords<CashFlowEventRecord>({
     objectNameSingular: 'cashFlowEvent',
     filter: { opportunityId: { eq: opportunityId } },
+    skip: options?.skip,
   });
 
   const eventsBySeasonLabel = useMemo(() => {

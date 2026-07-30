@@ -2,6 +2,7 @@ import { useGetIsMetadataItemFromStandardApplication } from '@/object-metadata/h
 import { getObjectPermissionsForObject } from '@/object-metadata/utils/getObjectPermissionsForObject';
 import { isLabelIdentifierField } from '@/object-metadata/utils/isLabelIdentifierField';
 import { isRecordFieldReadOnly } from '@/object-record/read-only/utils/isRecordFieldReadOnly';
+import { useCashFlowComputedSeasonFieldOverride } from '@/page-layout/widgets/cash-flow/hooks/useCashFlowSeasonFieldOverride';
 import { type RecordField } from '@/object-record/record-field/types/RecordField';
 import { FieldContext } from '@/object-record/record-field/ui/contexts/FieldContext';
 import { isFieldRelationManyToOne } from '@/object-record/record-field/ui/types/guards/isFieldRelationManyToOne';
@@ -42,6 +43,11 @@ export const RecordTableCellFieldContextGeneric = ({
 
   const fieldDefinition =
     fieldDefinitionByFieldMetadataItemId[recordField.fieldMetadataItemId];
+
+  const { isComputedFromEvents } = useCashFlowComputedSeasonFieldOverride({
+    recordId,
+    fieldDefinition,
+  });
 
   const updateRecord = useContext(RecordTableUpdateContext);
   const getIsMetadataItemFromStandardApplication =
@@ -125,6 +131,7 @@ export const RecordTableCellFieldContextGeneric = ({
             },
             fieldDefinition,
             objectPermissionsByObjectMetadataId,
+            isComputedFromExternalSource: isComputedFromEvents,
           }),
         isForbidden: !hasObjectReadPermissions,
       }}

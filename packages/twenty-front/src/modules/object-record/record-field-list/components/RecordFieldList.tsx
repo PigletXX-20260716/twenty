@@ -22,6 +22,8 @@ import { PropertyBox } from '@/object-record/record-inline-cell/property-box/com
 import { useRecordShowContainerActions } from '@/object-record/record-show/hooks/useRecordShowContainerActions';
 import { useRecordShowContainerData } from '@/object-record/record-show/hooks/useRecordShowContainerData';
 import { getRecordFieldInputInstanceId } from '@/object-record/utils/getRecordFieldInputId';
+import { useCashFlowEventsForRecord } from '@/page-layout/widgets/cash-flow/hooks/useCashFlowEventsForRecord';
+import { getIsCashFlowSeasonFieldComputedFromEvents } from '@/page-layout/widgets/cash-flow/utils/getIsCashFlowSeasonFieldComputedFromEvents';
 import { getObjectPermissionsFromMapByObjectMetadataId } from '@/settings/roles/role-permissions/objects-permissions/utils/getObjectPermissionsFromMapByObjectMetadataId';
 import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
 import {
@@ -68,6 +70,10 @@ export const RecordFieldList = ({
   const isRecordReadOnly = useIsRecordReadOnly({
     recordId: objectRecordId,
     objectMetadataId: objectMetadataItem.id,
+  });
+
+  const { eventsBySeasonLabel } = useCashFlowEventsForRecord(objectRecordId, {
+    skip: objectNameSingular !== 'opportunity',
   });
 
   const setRecordFieldListHoverPosition = useSetAtomComponentState(
@@ -198,6 +204,11 @@ export const RecordFieldList = ({
                   },
                   fieldDefinition,
                   objectPermissionsByObjectMetadataId,
+                  isComputedFromExternalSource:
+                    getIsCashFlowSeasonFieldComputedFromEvents({
+                      fieldDefinition,
+                      eventsBySeasonLabel,
+                    }),
                 }),
                 onMouseEnter: () =>
                   handleMouseEnter(

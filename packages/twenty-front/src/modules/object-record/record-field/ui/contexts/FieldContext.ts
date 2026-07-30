@@ -44,6 +44,7 @@ export type GenericFieldContextType = {
   isForbidden?: boolean;
   anchorId?: string;
   isDisplayInRecordTable?: boolean;
+  disableComputedFieldOverride?: boolean;
 };
 
 export const FieldContext = createContext<GenericFieldContextType>(
