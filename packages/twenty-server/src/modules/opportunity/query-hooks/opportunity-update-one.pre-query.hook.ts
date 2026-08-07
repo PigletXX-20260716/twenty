@@ -11,6 +11,13 @@ import {
   LOAN_TO_VALUE_RATIO_FIELD_NAME,
   OpportunityLoanToValueRatioService,
 } from 'src/modules/opportunity/query-hooks/opportunity-loan-to-value-ratio.service';
+import { OpportunityRiskFlagRationaleService } from 'src/modules/opportunity/query-hooks/opportunity-risk-flag-rationale.service';
+import {
+  AI_SUGGESTED_DECISION_FIELD_NAME,
+  AI_SUGGESTED_RATIONALE_FIELD_NAME,
+  AI_SUGGESTED_TRIGGERING_FACTORS_FIELD_NAME,
+  OpportunityRiskFlagSuggestionService,
+} from 'src/modules/opportunity/query-hooks/opportunity-risk-flag-suggestion.service';
 import {
   FALL_NET_CASH_FLOW_FIELD_NAME,
   SPRING_NET_CASH_FLOW_FIELD_NAME,
@@ -22,11 +29,27 @@ import {
   type CashFlowSeasonInputs,
 } from 'src/modules/opportunity/query-hooks/opportunity-worst-case-loan-to-value-ratio.service';
 
+// Trigger fields for the risk-flag rules engine + LLM rationale call - the
+// recompute (and its LLM call) only fires when one of these is actually part
+// of the update, so e.g. the officer's own decision Submit (which only
+// touches AI_SUGGESTED_*/officerDecision* fields) doesn't re-trigger it.
+const RISK_FLAG_TRIGGER_FIELD_NAMES = [
+  'amount',
+  FARM_PROPERTY_VALUE_FIELD_NAME,
+  STARTING_CASH_BALANCE_FIELD_NAME,
+  SPRING_NET_CASH_FLOW_FIELD_NAME,
+  SUMMER_NET_CASH_FLOW_FIELD_NAME,
+  FALL_NET_CASH_FLOW_FIELD_NAME,
+  WINTER_NET_CASH_FLOW_FIELD_NAME,
+];
+
 @WorkspaceQueryHook(`opportunity.updateOne`)
 export class OpportunityUpdateOnePreQueryHook implements WorkspacePreQueryHookInstance {
   constructor(
     private readonly opportunityLoanToValueRatioService: OpportunityLoanToValueRatioService,
     private readonly opportunityWorstCaseLoanToValueRatioService: OpportunityWorstCaseLoanToValueRatioService,
+    private readonly opportunityRiskFlagSuggestionService: OpportunityRiskFlagSuggestionService,
+    private readonly opportunityRiskFlagRationaleService: OpportunityRiskFlagRationaleService,
   ) {}
 
   async execute(
@@ -82,6 +105,23 @@ export class OpportunityUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       );
 
     let worstCaseLoanToValueRatio: number | null = null;
+    let seasonInputs: CashFlowSeasonInputs = {
+      startingCashBalance: payload.data[
+        STARTING_CASH_BALANCE_FIELD_NAME
+      ] as CurrencyMetadata | null,
+      springNetCashFlow: payload.data[
+        SPRING_NET_CASH_FLOW_FIELD_NAME
+      ] as CurrencyMetadata | null,
+      summerNetCashFlow: payload.data[
+        SUMMER_NET_CASH_FLOW_FIELD_NAME
+      ] as CurrencyMetadata | null,
+      fallNetCashFlow: payload.data[
+        FALL_NET_CASH_FLOW_FIELD_NAME
+      ] as CurrencyMetadata | null,
+      winterNetCashFlow: payload.data[
+        WINTER_NET_CASH_FLOW_FIELD_NAME
+      ] as CurrencyMetadata | null,
+    };
 
     if (worstCaseFieldsEnabled) {
       const existingCashFlowInputs =
@@ -92,7 +132,7 @@ export class OpportunityUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
           },
         );
 
-      const seasonInputs: CashFlowSeasonInputs = {
+      seasonInputs = {
         startingCashBalance: isDefined(
           payload.data[STARTING_CASH_BALANCE_FIELD_NAME],
         )
@@ -136,6 +176,55 @@ export class OpportunityUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
         );
     }
 
+    const riskFlagFieldsEnabled =
+      await this.opportunityRiskFlagSuggestionService.areRiskFlagFieldsEnabled(
+        authContext.workspace.id,
+      );
+
+    const payloadTouchesTriggerField = RISK_FLAG_TRIGGER_FIELD_NAMES.some(
+      (fieldName) => isDefined(payload.data[fieldName]),
+    );
+
+    let riskFlagData: Record<string, unknown> = {};
+
+    if (riskFlagFieldsEnabled && payloadTouchesTriggerField) {
+      const yearEndCashBalance =
+        this.opportunityRiskFlagSuggestionService.calculateYearEndCashBalance(
+          seasonInputs,
+        );
+      const isCashFlowDataMissing =
+        this.opportunityRiskFlagSuggestionService.isCashFlowDataMissing(
+          seasonInputs,
+        );
+
+      const suggestion =
+        this.opportunityRiskFlagSuggestionService.computeSuggestedOutcome({
+          loanAmount,
+          currentLoanToValueRatio: loanToValueRatio,
+          worstCaseLoanToValueRatio,
+          yearEndCashBalance,
+          isCashFlowDataMissing,
+        });
+
+      const rationale =
+        await this.opportunityRiskFlagRationaleService.generateRationale({
+          outcome: suggestion.outcome,
+          reasons: suggestion.reasons,
+          loanAmount,
+          currentLoanToValueRatio: loanToValueRatio,
+          worstCaseLoanToValueRatio,
+          yearEndCashBalance,
+        });
+
+      riskFlagData = {
+        [AI_SUGGESTED_DECISION_FIELD_NAME]: suggestion.outcome,
+        [AI_SUGGESTED_TRIGGERING_FACTORS_FIELD_NAME]: suggestion.reasons
+          .map((reason) => reason.message)
+          .join('\n'),
+        [AI_SUGGESTED_RATIONALE_FIELD_NAME]: rationale,
+      };
+    }
+
     return {
       ...payload,
       data: {
@@ -147,6 +236,7 @@ export class OpportunityUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
                 worstCaseLoanToValueRatio,
             }
           : {}),
+        ...riskFlagData,
       },
     };
   }

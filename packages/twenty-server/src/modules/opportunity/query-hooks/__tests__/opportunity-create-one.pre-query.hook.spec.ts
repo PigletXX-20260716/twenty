@@ -4,6 +4,8 @@ import { type CreateOneResolverArgs } from 'src/engine/api/graphql/workspace-res
 import { type WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
 import { OpportunityCreateOnePreQueryHook } from 'src/modules/opportunity/query-hooks/opportunity-create-one.pre-query.hook';
 import { OpportunityLoanToValueRatioService } from 'src/modules/opportunity/query-hooks/opportunity-loan-to-value-ratio.service';
+import { OpportunityRiskFlagRationaleService } from 'src/modules/opportunity/query-hooks/opportunity-risk-flag-rationale.service';
+import { OpportunityRiskFlagSuggestionService } from 'src/modules/opportunity/query-hooks/opportunity-risk-flag-suggestion.service';
 import { OpportunityWorstCaseLoanToValueRatioService } from 'src/modules/opportunity/query-hooks/opportunity-worst-case-loan-to-value-ratio.service';
 
 describe('OpportunityCreateOnePreQueryHook', () => {
@@ -13,6 +15,7 @@ describe('OpportunityCreateOnePreQueryHook', () => {
   let calculateLoanToValueRatio: jest.Mock;
   let areWorstCaseLoanToValueFieldsEnabled: jest.Mock;
   let calculateWorstCaseLoanToValueRatio: jest.Mock;
+  let areRiskFlagFieldsEnabled: jest.Mock;
 
   const authContext = {
     type: 'system',
@@ -25,6 +28,7 @@ describe('OpportunityCreateOnePreQueryHook', () => {
     calculateLoanToValueRatio = jest.fn();
     areWorstCaseLoanToValueFieldsEnabled = jest.fn().mockResolvedValue(false);
     calculateWorstCaseLoanToValueRatio = jest.fn();
+    areRiskFlagFieldsEnabled = jest.fn().mockResolvedValue(false);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -42,6 +46,21 @@ describe('OpportunityCreateOnePreQueryHook', () => {
           useValue: {
             areWorstCaseLoanToValueFieldsEnabled,
             calculateWorstCaseLoanToValueRatio,
+          },
+        },
+        {
+          provide: OpportunityRiskFlagSuggestionService,
+          useValue: {
+            areRiskFlagFieldsEnabled,
+            calculateYearEndCashBalance: jest.fn(),
+            isCashFlowDataMissing: jest.fn(),
+            computeSuggestedOutcome: jest.fn(),
+          },
+        },
+        {
+          provide: OpportunityRiskFlagRationaleService,
+          useValue: {
+            generateRationale: jest.fn(),
           },
         },
       ],
