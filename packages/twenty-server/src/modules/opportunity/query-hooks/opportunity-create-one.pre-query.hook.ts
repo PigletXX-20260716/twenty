@@ -10,6 +10,13 @@ import {
   LOAN_TO_VALUE_RATIO_FIELD_NAME,
   OpportunityLoanToValueRatioService,
 } from 'src/modules/opportunity/query-hooks/opportunity-loan-to-value-ratio.service';
+import { OpportunityRiskFlagRationaleService } from 'src/modules/opportunity/query-hooks/opportunity-risk-flag-rationale.service';
+import {
+  AI_SUGGESTED_DECISION_FIELD_NAME,
+  AI_SUGGESTED_RATIONALE_FIELD_NAME,
+  AI_SUGGESTED_TRIGGERING_FACTORS_FIELD_NAME,
+  OpportunityRiskFlagSuggestionService,
+} from 'src/modules/opportunity/query-hooks/opportunity-risk-flag-suggestion.service';
 import {
   FALL_NET_CASH_FLOW_FIELD_NAME,
   SPRING_NET_CASH_FLOW_FIELD_NAME,
@@ -18,6 +25,7 @@ import {
   WINTER_NET_CASH_FLOW_FIELD_NAME,
   WORST_CASE_LOAN_TO_VALUE_RATIO_FIELD_NAME,
   OpportunityWorstCaseLoanToValueRatioService,
+  type CashFlowSeasonInputs,
 } from 'src/modules/opportunity/query-hooks/opportunity-worst-case-loan-to-value-ratio.service';
 
 @WorkspaceQueryHook(`opportunity.createOne`)
@@ -25,6 +33,8 @@ export class OpportunityCreateOnePreQueryHook implements WorkspacePreQueryHookIn
   constructor(
     private readonly opportunityLoanToValueRatioService: OpportunityLoanToValueRatioService,
     private readonly opportunityWorstCaseLoanToValueRatioService: OpportunityWorstCaseLoanToValueRatioService,
+    private readonly opportunityRiskFlagSuggestionService: OpportunityRiskFlagSuggestionService,
+    private readonly opportunityRiskFlagRationaleService: OpportunityRiskFlagRationaleService,
   ) {}
 
   async execute(
@@ -57,6 +67,24 @@ export class OpportunityCreateOnePreQueryHook implements WorkspacePreQueryHookIn
         farmPropertyValue,
       );
 
+    const seasonInputs: CashFlowSeasonInputs = {
+      startingCashBalance: payload.data[
+        STARTING_CASH_BALANCE_FIELD_NAME
+      ] as CurrencyMetadata | null,
+      springNetCashFlow: payload.data[
+        SPRING_NET_CASH_FLOW_FIELD_NAME
+      ] as CurrencyMetadata | null,
+      summerNetCashFlow: payload.data[
+        SUMMER_NET_CASH_FLOW_FIELD_NAME
+      ] as CurrencyMetadata | null,
+      fallNetCashFlow: payload.data[
+        FALL_NET_CASH_FLOW_FIELD_NAME
+      ] as CurrencyMetadata | null,
+      winterNetCashFlow: payload.data[
+        WINTER_NET_CASH_FLOW_FIELD_NAME
+      ] as CurrencyMetadata | null,
+    };
+
     const worstCaseFieldsEnabled =
       await this.opportunityWorstCaseLoanToValueRatioService.areWorstCaseLoanToValueFieldsEnabled(
         authContext.workspace.id,
@@ -66,25 +94,54 @@ export class OpportunityCreateOnePreQueryHook implements WorkspacePreQueryHookIn
       ? this.opportunityWorstCaseLoanToValueRatioService.calculateWorstCaseLoanToValueRatio(
           loanAmount,
           farmPropertyValue,
-          {
-            startingCashBalance: payload.data[
-              STARTING_CASH_BALANCE_FIELD_NAME
-            ] as CurrencyMetadata | null,
-            springNetCashFlow: payload.data[
-              SPRING_NET_CASH_FLOW_FIELD_NAME
-            ] as CurrencyMetadata | null,
-            summerNetCashFlow: payload.data[
-              SUMMER_NET_CASH_FLOW_FIELD_NAME
-            ] as CurrencyMetadata | null,
-            fallNetCashFlow: payload.data[
-              FALL_NET_CASH_FLOW_FIELD_NAME
-            ] as CurrencyMetadata | null,
-            winterNetCashFlow: payload.data[
-              WINTER_NET_CASH_FLOW_FIELD_NAME
-            ] as CurrencyMetadata | null,
-          },
+          seasonInputs,
         )
       : null;
+
+    const riskFlagFieldsEnabled =
+      await this.opportunityRiskFlagSuggestionService.areRiskFlagFieldsEnabled(
+        authContext.workspace.id,
+      );
+
+    let riskFlagData: Record<string, unknown> = {};
+
+    if (riskFlagFieldsEnabled) {
+      const yearEndCashBalance =
+        this.opportunityRiskFlagSuggestionService.calculateYearEndCashBalance(
+          seasonInputs,
+        );
+      const isCashFlowDataMissing =
+        this.opportunityRiskFlagSuggestionService.isCashFlowDataMissing(
+          seasonInputs,
+        );
+
+      const suggestion =
+        this.opportunityRiskFlagSuggestionService.computeSuggestedOutcome({
+          loanAmount,
+          currentLoanToValueRatio: loanToValueRatio,
+          worstCaseLoanToValueRatio,
+          yearEndCashBalance,
+          isCashFlowDataMissing,
+        });
+
+      const rationale =
+        await this.opportunityRiskFlagRationaleService.generateRationale({
+          outcome: suggestion.outcome,
+          reasons: suggestion.reasons,
+          loanAmount,
+          currentLoanToValueRatio: loanToValueRatio,
+          worstCaseLoanToValueRatio,
+          yearEndCashBalance,
+        });
+
+      riskFlagData = {
+        [AI_SUGGESTED_DECISION_FIELD_NAME]: suggestion.outcome,
+        [AI_SUGGESTED_TRIGGERING_FACTORS_FIELD_NAME]: suggestion.reasons
+          .map((reason) => reason.message)
+          .join('\n'),
+        [AI_SUGGESTED_RATIONALE_FIELD_NAME]: rationale,
+      };
+    }
 
     return {
       ...payload,
@@ -97,6 +154,7 @@ export class OpportunityCreateOnePreQueryHook implements WorkspacePreQueryHookIn
                 worstCaseLoanToValueRatio,
             }
           : {}),
+        ...riskFlagData,
       },
     };
   }

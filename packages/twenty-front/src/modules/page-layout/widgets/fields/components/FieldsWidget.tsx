@@ -1,5 +1,6 @@
 import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
 import { RecordFieldsScopeContextProvider } from '@/object-record/record-field-list/contexts/RecordFieldsScopeContext';
+import { RiskFlagDecisionSection } from '@/object-record/record-field-list/risk-flag-decision/components/RiskFlagDecisionSection';
 import { RecordFieldListComponentInstanceContext } from '@/object-record/record-field-list/states/contexts/RecordFieldListComponentInstanceContext';
 import { type PageLayoutWidget } from '@/page-layout/types/PageLayoutWidget';
 import { FieldsWidgetCellEditModePortal } from '@/page-layout/widgets/fields/components/FieldsWidgetCellEditModePortal';
@@ -131,6 +132,9 @@ export const FieldsWidget = ({ widget }: FieldsWidgetProps) => {
             instanceId,
           }}
         >
+          {targetRecord.targetObjectNameSingular === 'opportunity' && (
+            <RiskFlagDecisionSection objectRecordId={targetRecord.id} />
+          )}
           {displayMode === 'inline' ? (
             <StyledInlineFieldsPropertyBox
               hasMoreGroup={shouldShowHiddenFields}
